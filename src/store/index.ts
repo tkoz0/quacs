@@ -81,11 +81,11 @@ export default new Vuex.Store({
     },
   },
   actions: {
-    loadCourseSizes({ commit }): void {
+    loadCourseSizes({ commit, state }): void {
       //TODO switch to better server for this over a free herokuapp instance
       axios
         .get(
-          "https://vast-waters-42287.herokuapp.com/https://sis.rpi.edu/reg/rocs/YACS_202009.xml"
+          `https://vast-waters-42287.herokuapp.com/https://sis.rpi.edu/reg/rocs/YACS_${state.schedule.currentTerm}.xml`
         )
         .then((r) => r.data)
         .then((data) => {

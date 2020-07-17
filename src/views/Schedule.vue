@@ -8,20 +8,32 @@
         opacity="0.7"
       >
         <div style="padding-bottom: 2rem;" :key="lastNewSchedule">
-          <div class="schedule-select">
-            <!-- <div v-if="numSchedules !== 0"> -->
-            <b-icon-chevron-left
-              class="schedule-select-button"
-              v-on:click="decrementSchedule()"
-            ></b-icon-chevron-left>
-            <span class="schedule-num">
-              {{ visibleCurrentScheduleNumber }} / {{ numSchedules }}
-            </span>
-            <b-icon-chevron-right
-              class="schedule-select-button"
-              v-on:click="incrementSchedule()"
-            ></b-icon-chevron-right>
-          </div>
+          <b-row class="justify-content-md-center">
+            <b-col></b-col>
+            <b-col>
+              <div class="schedule-select">
+                <b-icon-chevron-left
+                  class="schedule-select-button"
+                  v-on:click="decrementSchedule()"
+                ></b-icon-chevron-left>
+                <span class="schedule-num">
+                  {{ visibleCurrentScheduleNumber }} / {{ numSchedules }}
+                </span>
+                <b-icon-chevron-right
+                  class="schedule-select-button"
+                  v-on:click="incrementSchedule()"
+                ></b-icon-chevron-right>
+              </div>
+            </b-col>
+            <b-col>
+              <b-button
+                @click="downloadICS()"
+                class="float-right"
+                variant="success"
+                >Download ICS</b-button
+              >
+            </b-col>
+          </b-row>
 
           <Calendar :crns="currentScheduleCRNs" />
 
@@ -86,14 +98,18 @@
 import { Component, Vue, Watch } from "vue-property-decorator";
 import { mapGetters, mapState } from "vuex";
 import {
+  BButton,
+  BCol,
   BIconChevronLeft,
   BIconChevronRight,
   BOverlay,
+  BRow,
   BSpinner,
 } from "bootstrap-vue";
 import Calendar from "@/components/Calendar.vue";
 import { Course } from "@/typings";
 import CourseCard from "@/components/CourseCard.vue";
+import {createEvents} from "ics";
 
 function mod(n: number, m: number) {
   return ((n % m) + m) % m;
@@ -116,6 +132,9 @@ function mod(n: number, m: number) {
     "b-icon-chevron-right": BIconChevronRight,
     "b-spinner": BSpinner,
     "b-overlay": BOverlay,
+    "b-button": BButton,
+    "b-row": BRow,
+    "b-col": BCol,
   },
 })
 export default class Schedule extends Vue {
@@ -233,6 +252,68 @@ export default class Schedule extends Vue {
       // @ts-expect-error: I know it might be null but the element exists so stop complaining
       copyIndicator.className = copyIndicator.className.replace("show", "");
     }, 2000);
+  }
+
+  downloadICS() {
+    // const { error, value } = createEvents([
+    //   {
+    //     title: 'Lunch',
+    //     start: [2018, 1, 15, 12, 15],
+    //     duration: { minutes: 45 }
+    //   },
+    //   {
+    //     title: 'Dinner',
+    //     start: [2018, 1, 15, 12, 15],
+    //     duration: { hours: 1, minutes: 30 }
+    //   }
+    // ])
+    //
+    // if (error) {
+    //   console.log(error)
+    //   return
+    // }
+    // console.log(value)
+
+    const days = {
+      "M":"MO",
+      "T":"TU",
+      "W":"WE",
+      "R":"TH",
+      "F":"FR",
+    }
+    const year = parseInt(this.$store.state.schedule.currentTerm.toString().substring(0,4));
+
+    const eventData = []
+    for (const dept of this.$store.state.departments) {
+      for (const course of dept.courses) {
+        for (const section of course.sections) {
+          for (const crn of this.currentScheduleCRNs) {
+            if(crn == section.crn){
+              for(const timeslot of section.timeslots){
+                for(const day of timeslot.days){
+                  eventData.push({
+                    title: section.title,
+                    location: timeslot.location,
+                    startOutputType: "local",
+                    startInputType: "utc",
+                    recurrenceRule: `FREQ=WEEKLY;BYDAY=${days[day]};INTERVAL=1;UNTIL=${year}${timeslot.dateEnd.split('/')[0]}${timeslot.dateEnd.split('/')[1]}T235959Z`,
+                    start: [year, timeslot.dateStart.split('/')[0], timeslot.dateStart.split('/')[1], parseInt(timeslot.timeStart.toString().substring(0,2)), parseInt(timeslot.timeStart.toString().substring(2,4))],
+                    end: [year, timeslot.dateStart.split('/')[0], timeslot.dateStart.split('/')[1], parseInt(timeslot.timeEnd.toString().substring(0,2)), parseInt(timeslot.timeEnd.toString().substring(2,4))],
+                  })
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    const { error, value } = createEvents(eventData)
+    if (error) {
+      console.log(error)
+      return
+    }
+    console.log(value)
+    console.log(eventData)
   }
 }
 </script>
