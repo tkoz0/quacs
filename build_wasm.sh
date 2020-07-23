@@ -19,6 +19,7 @@ fi
 # Update our local dependencies (quacs-rs, quacs-data), or clone if possible
 git -C src/store/data pull || git clone https://github.com/quacs/quacs-data src/store/data
 git -C src/quacs-rs pull || git clone https://github.com/quacs/quacs-rs src/quacs-rs
+git -C src/quacs-rs checkout staging # we're on the staging branch, but don't care if this fails
 rm -rf ./src/quacs-rs/src/data
 ln -srf ./src/store/data ./src/quacs-rs/src/
 cd src/quacs-rs/
